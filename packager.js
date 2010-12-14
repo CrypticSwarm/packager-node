@@ -80,41 +80,34 @@ this.Packager = {
     
     var self = this;
     manifest.sources.forEach(function(path, i){
-      var path = package_path + path;
-      
+      var path = package_path + path
       // this is where we "hook" for possible other replacers.
-      var source = fs.readFileSync(path).toString();
-
-      var descriptor = {};
-
+        , source = fs.readFileSync(path).toString()
       // get contents of first comment
-      var matches = source.match('/\/\*\s*^---(.*?)^\.\.\.\s*\*\//ms');
-
-      if (matches.length) {
-        var descriptor = YAML.decode(matches[0]);
-      }
-
+        , matches = source.match('/\/\*\s*^---(.*?)^\.\.\.\s*\*\//ms')
+        , descriptor = (matches && yaml.eval(matches[0])) || {}
       // populate / convert to array requires and provides
-      var requires = descriptor.requires || [];
-      var provides = descriptor.provides || [];
-      var file_name = descriptor.name || p.basename(path) + '.js';
-
+        , provides = descriptor.provides || []
+        , file_name = descriptor.name || p.basename(path) + '.js'
+        , license = descriptor.license
       // "normalization" for requires. Fills up the default package name from requires, if not present.
-      requires.map(function(require){
-        return self.parse_name(package_name, require).join('/');
-      })
-      
-      license = descriptor.license;
+        , requires = (descriptor.requires || []).map(
+            function(require){
+              return self.parse_name(package_name, require).join('/');
+            }
+          );
 
-      self.packages[package_name][file_name] = Object.extend(descriptor, {
-        package: package_name,
-        requires: requires,
-        provides: provides,
-        source: source,
-        path: path,
-        'package/name': package_name + '/' + file_name,
-        license: license || manifest.license
-      });
+      //is packages[package_name] initialized?
+      self.packages[package_name][file_name] = Object.extend(descriptor
+        , { package: package_name
+          , requires: requires
+          , provides: provides
+          , source: source
+          , path: path
+          , 'package/name': package_name + '/' + file_name
+          , license: license || manifest.license
+          }
+      );
       
     });
 
