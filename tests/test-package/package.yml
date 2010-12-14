@@ -1,0 +1,11 @@
+name: TestPackage
+
+author: rpflo
+
+copyright: "&copy; [Ryan Florence](http://ryanflorence.com)"
+
+license: MIT-style license.
+
+sources:
+  - "source.js"
+  - "source2.js"
