@@ -18,8 +18,8 @@ this.Packager = {
     console.warn(message);
   },
 
-  packages: [],
-  manifests: [],
+  packages: {},
+  manifests: {},
   root: null,
   
   construct: function(package_paths){
@@ -72,7 +72,7 @@ this.Packager = {
     
     if (this.root === null) this.root = package_name;
 
-    if (this.manifests.indexOf(package_name) > -1) return;
+    if (this.manifests[package_name]) return;
 
     manifest.path = package_path;
     manifest.manifest = manifest_path;
