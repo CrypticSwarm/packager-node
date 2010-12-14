@@ -15,9 +15,6 @@ Object.extend = function(original, extensions){
 this.Packager = {
   
   warn: function (message){
-    //std_err = fopen('php://stderr', 'w');
-    //fwrite(std_err, message);
-    //fclose(std_err);
     console.warn(message);
   },
 
