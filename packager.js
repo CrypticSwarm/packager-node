@@ -1,6 +1,15 @@
-var path = require('path'),
-    fs = require('fs'),
-    yaml = require('yaml');
+var path = require('path')
+  , fs = require('fs')
+  , yaml = require('yaml')
+  , fileParsers = exports.fileParsers =
+      { 'json': JSON.parse
+      , 'yaml': yaml.eval 
+      }
+  , manifestExtensions = exports.manifestExtensions = 
+      { yml:  'yaml'
+      , yaml: 'yaml'
+      , json: 'json'
+      };
 
 Object.extend = function(original, extensions){
   original = original || {};
@@ -30,29 +39,23 @@ this.Packager = {
   },
   
   parse_manifest: function(filePath){
-    var stat = fs.statSync(filePath);
+    var stat = fs.statSync(filePath)
+      , package_path
+      , manifest_path
+      , manifest_format;
 
     if (stat.isDirectory()){  
       console.log('isDirectory')    
-      var package_path = path.dirname(filePath) + '/' + path.basename(filePath) + '/',
-          manifest_path,
-          manifest_format;
-
+      package_path = path.dirname(filePath) + '/' + path.basename(filePath) + '/'
       console.log('package_path', package_path)
-      if (path.existsSync(package_path + 'package.yml')){
-        console.log('yml')
-        manifest_path = package_path + 'package.yml';
-        manifest_format = 'yaml';
-      } else if (path.existsSync(package_path + 'package.yaml')){
-        console.log('yaml')
-        manifest_path = package_path + 'package.yaml';
-        manifest_format = 'yaml';
-      } else if (path.existsSync(package_path + 'package.json')){
-        console.log('json')
-        manifest_path = package_path + 'package.json';
-        manifest_format = 'json';
-      }
-
+      Object.keys(manifestExtensions).some(function(ext){
+        if (path.existsSync(package_path + 'package.' + ext)){
+          console.log(ext);
+          manifest_path = package_path + 'package.' + ext;
+          manifest_format = extensions[ext];
+          return true;
+        }
+      });
     } else if (stat.isFile()){
       console.log('isFile')
       package_path = path.dirname(filePath) + '/';
@@ -60,11 +63,7 @@ this.Packager = {
       manifest_format = path.extname(filePath);
     }
     
-    if (manifest_format == 'json'){
-      var manifest = JSON.parse(fs.readFileSync(manifest_path).toString());
-    } else if (manifest_format == 'yaml' || manifest_format == 'yml') {
-      manifest = yaml.eval(fs.readFileSync(manifest_path).toString());
-    }
+    if (fileParsers[manifest_format]) var manifest = fileParsers[manifest_format](fs.readFileSync(manifest_path).toString());
 
     if (!Object.keys(manifest).length) throw new Error("manifest not found in package_path, or unable to parse manifest.");
     
