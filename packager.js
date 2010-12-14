@@ -3,13 +3,13 @@ var path = require('path'),
     yaml = require('yaml');
 
 Object.extend = function(original, extensions){
-	original = original || {};
-	for (var i in extensions){
-		if (extensions.hasOwnProperty(i)) {
-			original[i] = extensions[i];
-		}
-	}
-	return original;
+  original = original || {};
+  for (var i in extensions){
+    if (extensions.hasOwnProperty(i)) {
+      original[i] = extensions[i];
+    }
+  }
+  return original;
 };
 
 this.Packager = {
