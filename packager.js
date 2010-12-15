@@ -21,11 +21,34 @@ Object.extend = function(original, extensions){
   return original;
 };
 
-this.Packager = {
+Array.prototype.include = function(item) {
+  if (this.indexOf(item) !== -1) this.push(item);
+  return this;
+};
+
+Array.diff = function(arr, arr2){
+  return arr.map(function(item) {
+    return arr2.indexOf(item) === -1 
+      ? item
+      : null;
+  }).filter(function(item){
+    return item;
+  });
+};
+
+//Include may need to be Included!
+function includeAll(into, what){
+  what.forEach(function(item) {
+    into.include(item);
+  });
+}
+
+function warn(message){
+  console.warn(message);
+}
+
+var Packager = exports.Packager =  {
   
-  warn: function (message){
-    console.warn(message);
-  },
 
   packages: {},
   manifests: {},
@@ -52,7 +75,7 @@ this.Packager = {
         if (path.existsSync(package_path + 'package.' + ext)){
           console.log(ext);
           manifest_path = package_path + 'package.' + ext;
-          manifest_format = extensions[ext];
+          manifest_format = manifestExtensions[ext];
           return true;
         }
       });
@@ -77,15 +100,16 @@ this.Packager = {
     manifest.manifest = manifest_path;
     
     this.manifests[package_name] = manifest;
+    this.packages[package_name] = {};
     
-    var self = this;
+    var self = this, p = path;
     manifest.sources.forEach(function(path, i){
       var path = package_path + path
       // this is where we "hook" for possible other replacers.
         , source = fs.readFileSync(path).toString()
       // get contents of first comment
-        , matches = source.match('/\/\*\s*^---(.*?)^\.\.\.\s*\*\//ms')
-        , descriptor = (matches && yaml.eval(matches[0])) || {}
+        , matches = /\/\*\s*^---([\s\S]*?)^\.\.\.\s*\*\//m.exec(source)
+        , descriptor = (matches && yaml.eval(matches[1])) || {}
       // populate / convert to array requires and provides
         , provides = descriptor.provides || []
         , file_name = descriptor.name || p.basename(path) + '.js'
@@ -97,7 +121,6 @@ this.Packager = {
             }
           );
 
-      //is packages[package_name] initialized?
       self.packages[package_name][file_name] = Object.extend(descriptor
         , { package: package_name
           , requires: requires
@@ -119,8 +142,8 @@ this.Packager = {
   },
   
   remove_package: function(package_name){
-    unset(this.packages[package_name]);
-    unset(this.manifests[package_name]);
+    delete this.packages[package_name];
+    delete this.manifests[package_name];
   },
   
   // # private UTILITIES
@@ -134,190 +157,201 @@ this.Packager = {
   },
 
   // # private HASHES
-/*  
   component_to_hash: function(name){
-    pair = this.parse_name(this.root, name);
-    package = array_get(this.packages, pair[0]);
+    var pair = this.parse_name(this.root, name)
+      , package = this.packages[pair[0]]
+      , component = pair[1]
+      , ret = null;
 
-    if (!empty(package)){
-      component = pair[1];
-
-      foreach (package as file => data){
-        foreach (data['provides'] as c){
-          if (c == component) return data;
-        }
-      }
-    }
+    if (!package) return;
+    package.some(function(data, file){
+      return data.provides.some(function(c){
+        if (c == component) return ret = data;
+      });
+    });
     
-    return null;
+    return ret;
   },
   
   file_to_hash: function(name){
-    pair = this.parse_name(this.root, name);
-    package = array_get(this.packages, pair[0]);
+    var pair = this.parse_name(this.root, name)
+      , package = this.packages[pair[0]]
+      , ret = null;
 
-    if (!empty(package)){
-      file_name = pair[1];
+    if (!package) return;
+    file_name = pair[1];
 
-      foreach (package as file => data){
-        if (file == file_name) return data;
-      }
-    }
+    package.some(function(data, file) {
+      if (file == file_name) return ret = data;
+    });
     
-    return null;
+    return ret;
   },
   
   file_exists: function(name){
-    return this.file_to_hash(name) ? true : false;
+    return !!this.file_to_hash(name);
   },
   
   component_exists: function(name){
-    return this.component_to_hash(name) ? true : false;
+    return !!this.component_to_hash(name);
   },
   
   package_exists: function(name){
-    return array_contains(this.get_packages(), name);
+    return !!this.packages[name];
   },
   
-  validate: function(more_files = [], more_components = [], more_packages = []){
-
-    foreach (this.packages as name => files){
-      foreach (files as file){
-        file_requires = file['requires'];
-        foreach (file_requires as component){
+  validate: function(more_files, more_components, more_packages){
+    more_files = more_files || [];
+    more_components = more_components || [];
+    more_packages = more_packages || [];
+    var packageNames = Object.keys(this.packages)
+      , i = packages.length;
+    while(i--) {
+      this.packages[packageNames[i]].forEach(function(file) {
+        var file_requires = file['requires'];
+        file_requires.forEach(function(component){
           if (!this.component_exists(component)){
-            self::warn("WARNING: The component component, required in the file " + file['package/name'] + ", has not been provided.\n");
+            warn("WARNING: The component component, required in the file " + file['package/name'] + ", has not been provided.\n");
           }
-        }
-      }
-    }
+        });
+      });
+    };
     
-    foreach (more_files as file){
-      if (!this.file_exists(file)) self::warn("WARNING: The required file file could not be found.\n");
-    }
+    more_files.forEach(function(file){
+      if (!this.file_exists(file)) warn("WARNING: The required file file could not be found.\n");
+    });
     
-    foreach (more_components as component){
-      if (!this.component_exists(component)) self::warn("WARNING: The required component component could not be found.\n");
-    }
+    more_components.forEach(function(component){
+      if (!this.component_exists(component)) warn("WARNING: The required component component could not be found.\n");
+    });
     
-    foreach (more_packages as package){
-      if (!this.package_exists(package)) self::warn("WARNING: The required package package could not be found.\n");
-    }
+    more_packages.forEach(function(package){
+      if (!this.package_exists(package)) warn("WARNING: The required package package could not be found.\n");
+    });
   },
   
   // # public BUILD
   
-  build: function(files = [], components = [], packages = [], blocks = [], excluded = []){
+  build: function(files, components, packages, blocks, excluded){
+    files = files || [];
+    components = components || [];
+    packages = packages || [];
+    blocks = blocks || [];
+    excluded = excluded || [];
+    var more = this.components_to_files(components);
 
-    if (!empty(components)){
-      more = this.components_to_files(components);
-      foreach (more as file) array_include(files, file);
-    }
+    includeAll(files, more);
     
-    foreach (packages as package){
+    packages.forEach(function(package){
       more = this.get_all_files(package);
-      foreach (more as file) array_include(files, file);  
-    }
+      includeAll(files, more);
+    });
     
     files = this.complete_files(files);
     
-    if (!empty(excluded)){
-      less = [];
-      foreach (this.components_to_files(excluded) as file) array_include(less, file);
-      exclude = this.complete_files(less);
-      files = array_diff(files, exclude);
+    if (excluded.length){
+      var less = [];
+      includeAll(less, this.components_to_files(excluded));
+      var exclude = this.complete_files(less);
+      files = Array.diff(files, exclude);
     }
     
-    if (empty(files)) return '';
+    if (!files.length) return '';
     
     included_sources = [];
-    foreach (files as file) included_sources[] = this.get_file_source(file);
+    files.forEach(function(file) {
+        included_sources.push(this.get_file_source(file));
+    });
     
-    source = implode(included_sources, "\n\n");
-    
-    foreach (blocks as block){
-                                                                             / add slash there
-      source = preg_replace_callback("%(/[/*])\s*<block>(.*?)</block>(?:\s*\*)?%s", array(this, "block_replacement"), source);
-    }
+    source = included_sources.join("\n\n");
+
+    // double check that I know what this is doing!
+    blocks.forEach(function(block) {
+      source.replace(new Regexp('(/[/*])\\s*<' + block + '>(.*?)</' + block + '>(\\s*\\*)?', 'g'), this.block_replacement);
+    }, this);
     
     return source + "\n";
   },
   
   block_replacement: function(matches){
-                                                               / add slash there
-    return (strpos(matches[2], (matches[1] == "//") ? "\n" : "*") === false) ? matches[2] : "";
+    return (matches[2].indexOf(matches[1] == "//" ? "\n" : "*") === -1) ? matches[2] : "";
   },
   
   build_from_files: function(files){
     return this.build(files);
   },
   
-  build_from_components: function(components, blocks = null, excluded = null){
+  build_from_components: function(components, blocks, excluded){
     return this.build([], components, [], blocks, excluded);
   },
 
-  write_from_files: function(file_name, files = null){
-    full = this.build_from_files(files);
-    file_put_contents(file_name, full);
+  write_from_files: function(writeStream, files){
+    var full = this.build_from_files(files);
+    writeStream.write(full);
   },
 
-  write_from_components: function(file_name, components = null, blocks = null, exclude = null){
-    full = this.build_from_components(components, blocks, exclude);
-    file_put_contents(file_name, full);
+  write_from_components: function(writeStream, components, blocks, exclude){
+    var full = this.build_from_components(components, blocks, exclude);
+    writeStream.write(full);
   },
   
   // # public FILES
 
-  get_all_files: function(of_package = null){
-    files = [];
-    foreach (this.packages as name => package){
-      if (of_package == null || of_package == name) foreach (package as file){
-        files[] = file['package/name'];
+  get_all_files: function(of_package){
+    var files = []
+      , packageNames = Object.keys(this.packages)
+      , i = packages.length
+      , name;
+    while(i--) {
+      if (of_package == null || of_package == packageNames[i]) {
+        this.packages[packageNames[i]].forEach(function(file) {
+          files.push(file['package/name']);
+         });
       }
     }
     return files;
   },
   
   get_file_dependancies: function(file){
-    hash = this.file_to_hash(file);
-    if (empty(hash)) return [];
+    var hash = this.file_to_hash(file);
+    if (!hash) return [];
     return this.complete_files(this.components_to_files(hash['requires']));
   },
   
   complete_file: function(file){
-    files = this.get_file_dependancies(file);
-    hash = this.file_to_hash(file);
-    if (empty(hash)) return [];
-    array_include(files, hash['package/name']);
+    var files = this.get_file_dependancies(file)
+      , hash = this.file_to_hash(file);
+    if (!hash) return [];
+    files.include(hash['package/name']);
     return files;
   },
   
   complete_files: function(files){
-    ordered_files = [];
-    foreach (files as file){
-      all_files = this.complete_file(file);
-      foreach (all_files as one_file) array_include(ordered_files, one_file);
-    }
+    var ordered_files = [];
+    files.forEach(function(file){
+      var all_files = this.complete_file(file);
+      includeAll(ordered_files, all_files);
+    }, this);
     return ordered_files;
   },
   
   // # public COMPONENTS
   
   component_to_file: function(component){
-    return array_get(this.component_to_hash(component), 'package/name');
+    return this.component_to_hash(component)['package/name'];
   },
   
   components_to_files: function(components){
-    files = [];
-    foreach (components as component){
-      file_name = this.component_to_file(component);
-      if (!empty(file_name) && !in_array(file_name, files)) files[] = file_name;
-    }
+    var files = [];
+    components.forEach(function(component){
+      var file_name = this.component_to_file(component);
+      if (file_name) files.include(file_name);
+    });
     return files;
   },
   
   // # dynamic getter for PACKAGE properties and FILE properties
-  
+  /*
   _call: function(method, arguments){
     if (strpos(method, 'get_file_') === 0){
       file = array_get(arguments, 0);
@@ -336,35 +370,33 @@ this.Packager = {
     
     return null;
   },
-  
+ */ 
   get_packages: function(){
-    return array_keys(this.packages);
+    return Object.keys(this.packages);
   },
   
   // authors normalization
   
-  get_package_authors: function(package = null){
-    if (empty(package)) package = this.root;
-    package = array_get(this.manifests, package);
-    if (empty(package)) return [];
-    return this.normalize_authors(array_get(package, 'authors'), array_get(package, 'author'));
+  get_package_authors: function(package){
+    if (package) package = this.root;
+    package = this.manifests[package];
+    if (!package) return [];
+    return this.normalize_authors(package['authors'], package['author']);
   },
   
   get_file_authors: function(file){
-    hash = this.file_to_hash(file);
-    if (empty(hash)) return [];
-    return this.normalize_authors(array_get(hash, 'authors'), array_get(hash, 'author'), this.get_package_authors());
+    var hash = this.file_to_hash(file);
+    if (!hash) return [];
+    return this.normalize_authors(hash.authors, hash.author, this.get_package_authors());
   },
   
-  normalize_authors: function(authors = null, author = null, default = null){
-    use = empty(authors) ? author : authors;
-    if (empty(use) && !empty(default)) return default;
-    if (is_array(use)) return use;
-    if (empty(use)) return [];
-    return array(use);
+  normalize_authors: function(authors, author, ddefault){
+    var use = authors ? authors : author;
+    if (!use && ddefault) return ddefault;
+    if (Array.isArray(use)) return use;
+    if (!use) return [];
+    return [use];
   }
-  */
   
 };
 
-exports = this.Packager;
