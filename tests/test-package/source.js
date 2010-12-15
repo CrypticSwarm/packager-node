@@ -1,16 +1,16 @@
 /*
 ---
 
-name: TestPackage.Source
+name: "TestPackage.Source"
 
-license: MIT-style license.
+license: "MIT-style license."
 
-author: Ryan Florence
+author: "Ryan Florence"
 
 requires:
-  - source2
+  - "source2"
 
-provides: [source]
+provides: ["source"]
 
 ...
 */
