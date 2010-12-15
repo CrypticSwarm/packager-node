@@ -1,11 +1,11 @@
 /*
 ---
 
-name: "TestPackage.Source"
+name: "Source"
 
 license: "MIT-style license."
 
-author: "Ryan Florence"
+author: "CrypticSwarm"
 
 requires:
   - "source2"

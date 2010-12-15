@@ -164,9 +164,9 @@ var Packager = exports.Packager =  {
       , ret = null;
 
     if (!package) return;
-    package.some(function(data, file){
-      return data.provides.some(function(c){
-        if (c == component) return ret = data;
+    Object.keys(package).some(function(file){
+      return package[file].provides.some(function(c){
+        if (c == component) return ret = package[file];
       });
     });
     
@@ -181,8 +181,8 @@ var Packager = exports.Packager =  {
     if (!package) return;
     file_name = pair[1];
 
-    package.some(function(data, file) {
-      if (file == file_name) return ret = data;
+    Object.keys(package).some(function(file) {
+      if (file == file_name) return ret = package[file];
     });
     
     return ret;
@@ -300,13 +300,15 @@ var Packager = exports.Packager =  {
   get_all_files: function(of_package){
     var files = []
       , packageNames = Object.keys(this.packages)
-      , i = packages.length
-      , name;
+      , i = packageNames.length
+      , name
+      , package;
     while(i--) {
       if (of_package == null || of_package == packageNames[i]) {
-        this.packages[packageNames[i]].forEach(function(file) {
-          files.push(file['package/name']);
-         });
+        package = this.packages[packageNames[i]];
+        Object.keys(package).forEach(function(file) {
+          files.push(package[file]['package/name']);
+        });
       }
     }
     return files;
