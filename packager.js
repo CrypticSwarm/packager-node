@@ -22,7 +22,7 @@ Object.extend = function(original, extensions){
 };
 
 Array.prototype.include = function(item) {
-  if (this.indexOf(item) !== -1) this.push(item);
+  if (this.indexOf(item) === -1) this.push(item);
   return this;
 };
 
