@@ -1,11 +1,11 @@
-name: "TestPackage"
+name: TestPackage
 
-author: "rpflo"
+author: rpflo
 
 copyright: "&copy; [Ryan Florence](http://ryanflorence.com)"
 
 license: "MIT-style license."
 
 sources:
-  - "source.js"
+  - source.js
   - "source2.js"

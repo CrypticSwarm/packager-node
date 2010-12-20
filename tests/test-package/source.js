@@ -10,7 +10,7 @@ author: "CrypticSwarm"
 requires:
   - "source2"
 
-provides: ["source"]
+provides: [source]
 
 ...
 */

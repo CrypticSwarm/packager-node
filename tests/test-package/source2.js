@@ -1,7 +1,7 @@
 /*
 ---
 
-name: "TestPackage.Source2"
+name: "Source2"
 
 license: "MIT-style license."
 
