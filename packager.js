@@ -11,30 +11,7 @@ var path = require('path')
       , json: 'json'
       };
 
-Object.extend = function(original, extensions){
-  original = original || {};
-  for (var i in extensions){
-    if (extensions.hasOwnProperty(i)) {
-      original[i] = extensions[i];
-    }
-  }
-  return original;
-};
-
-Array.prototype.include = function(item) {
-  if (this.indexOf(item) === -1) this.push(item);
-  return this;
-};
-
-Array.diff = function(arr, arr2){
-  return arr.map(function(item) {
-    return arr2.indexOf(item) === -1 
-      ? item
-      : null;
-  }).filter(function(item){
-    return item;
-  });
-};
+require('./util');
 
 //Include may need to be Included!
 function includeAll(into, what){
