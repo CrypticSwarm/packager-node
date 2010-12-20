@@ -25,92 +25,127 @@ function warn(message){
 }
 
 var Packager = exports.Packager =  {
-  
 
   packages: {},
   manifests: {},
   root: null,
   
-  construct: function(package_paths){
-    var self = this;
-    package_paths.forEach(function(package_path){
-      self.parse_manifest(package_path);
-    });
+  construct: function(package_paths, cb){
+    var self = this
+    step(
+      function() {
+        var group = this.group();
+        package_paths.forEach(function(package_path){
+          self.parse_manifest(package_path, group());
+        });
+      }
+      , function(grouped) {
+        this();
+      }
+      , cb
+    );
   },
   
-  parse_manifest: function(filePath){
-    var stat = fs.statSync(filePath)
-      , package_path
+  parse_manifest: function(filePath, cb){
+    var package_path
       , manifest_path
-      , manifest_format;
-
-    if (stat.isDirectory()){  
-      console.log('isDirectory')    
-      package_path = path.dirname(filePath) + '/' + path.basename(filePath) + '/'
-      console.log('package_path', package_path)
-      Object.keys(manifestExtensions).some(function(ext){
-        if (path.existsSync(package_path + 'package.' + ext)){
-          console.log(ext);
-          manifest_path = package_path + 'package.' + ext;
-          manifest_format = manifestExtensions[ext];
-          return true;
+      , manifest_format
+      , manifest
+      , package_name
+      , self = this;
+    step(
+      function statManifest() {
+        fs.stat(filePath, this)
+      }
+      , function getManifestFile(err, stat) {
+        if (err) throw err;
+        var group;
+        if (stat.isDirectory()){  
+          console.log('isDirectory');
+          package_path = path.dirname(filePath) + '/' + path.basename(filePath) + '/'
+          console.log('package_path', package_path)
+          group = this.group();
+          Object.keys(manifestExtensions).forEach(function(ext){
+            var cb = group()
+              , filePath = package_path + 'package.' + ext;
+            path.exists(filePath, function(exists){ 
+              if (!exists) return cb(null);
+              manifest_path = filePath;
+              manifest_format = manifestExtensions[ext];
+              cb();
+            });
+          });
+        } else if (stat.isFile()){
+          console.log('isFile')
+          package_path = path.dirname(filePath) + '/';
+          manifest_path = package_path + path.basename(filePath);
+          manifest_format = manifestExtensions[path.extname(filePath)];
+          this();
         }
-      });
-    } else if (stat.isFile()){
-      console.log('isFile')
-      package_path = path.dirname(filePath) + '/';
-      manifest_path = package_path + path.basename(filePath);
-      manifest_format = path.extname(filePath);
-    }
-    
-    if (fileParsers[manifest_format]) var manifest = fileParsers[manifest_format](fs.readFileSync(manifest_path).toString());
+      }
+      , function readManifest() {
+        if (!manifest_format || !manifest_path) throw new Error("Can't find Manifest File in package_path " + package_path);
+        if (!fileParsers[manifest_format]) throw new Error("No " + manifest_format + " manifest parser.");
+        fs.readFile(manifest_path, this);
+      }
+      , function parseManifest(err, manifestBuf) {
+        if (err) warn("Problem reading file " + manifest_path + " " + err);
+        var group;
+        manifest = fileParsers[manifest_format](manifestBuf.toString());
+        package_name = manifest.name;
 
-    if (!Object.keys(manifest).length) throw new Error("manifest not found in package_path, or unable to parse manifest.");
-    
-    var package_name = manifest.name;
-    
-    if (this.root === null) this.root = package_name;
+        if (self.root === null) self.root = package_name;
+        if (self.manifests[package_name]) return;
+        manifest.path = package_path;
+        manifest.manifest = manifest_path;
+        self.manifests[package_name] = manifest;
+        self.packages[package_name] = {};
+        group = this.group();
+        manifest.sources.forEach(function(filename, i){
+          var filePath = package_path + filename
+            , callback = group();
+          fs.readFile(filePath, function(err, source) {
+            callback(err,
+              { path: filePath
+              , source: source.toString()
+              });
+          });
+        });
+      }
+      , function parseSourceFiles(err, files) {
+        files.forEach(function(file){
+          var source = file.source
+            , filePath = file.path
+          // this is where we "hook" for possible other replacers.
+          // get contents of first comment
+            , matches = /\/\*\s*^---([\s\S]*?)^\.\.\.\s*\*\//m.exec(source)
+            , descriptor = (matches && yaml.eval(matches[1])) || {}
+          // populate / convert to array requires and provides
+            , provides = descriptor.provides || []
+            , file_name = descriptor.name || path.basename(filePath) + '.js'
+            , license = descriptor.license
+          // "normalization" for requires. Fills up the default package name from requires, if not present.
+            , requires = (descriptor.requires || []).map(
+                function(require){
+                  return self.parse_name(package_name, require).join('/');
+                }
+              );
 
-    if (this.manifests[package_name]) return;
-
-    manifest.path = package_path;
-    manifest.manifest = manifest_path;
-    
-    this.manifests[package_name] = manifest;
-    this.packages[package_name] = {};
-    
-    var self = this, p = path;
-    manifest.sources.forEach(function(path, i){
-      var path = package_path + path
-      // this is where we "hook" for possible other replacers.
-        , source = fs.readFileSync(path).toString()
-      // get contents of first comment
-        , matches = /\/\*\s*^---([\s\S]*?)^\.\.\.\s*\*\//m.exec(source)
-        , descriptor = (matches && yaml.eval(matches[1])) || {}
-      // populate / convert to array requires and provides
-        , provides = descriptor.provides || []
-        , file_name = descriptor.name || p.basename(path) + '.js'
-        , license = descriptor.license
-      // "normalization" for requires. Fills up the default package name from requires, if not present.
-        , requires = (descriptor.requires || []).map(
-            function(require){
-              return self.parse_name(package_name, require).join('/');
-            }
+          self.packages[package_name][file_name] = Object.extend(descriptor
+            , { package: package_name
+              , requires: requires
+              , provides: provides
+              , source: source
+              , path: filePath
+              , 'package/name': package_name + '/' + file_name
+              , license: license || manifest.license
+              }
           );
-
-      self.packages[package_name][file_name] = Object.extend(descriptor
-        , { package: package_name
-          , requires: requires
-          , provides: provides
-          , source: source
-          , path: path
-          , 'package/name': package_name + '/' + file_name
-          , license: license || manifest.license
-          }
-      );
-      
-    });
-
+        });
+        this();
+      }
+      , cb
+    );
   },
   
   // here
