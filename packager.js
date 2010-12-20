@@ -1,6 +1,7 @@
 var path = require('path')
   , fs = require('fs')
   , yaml = require('yaml')
+  , step = require('step')
   , fileParsers = exports.fileParsers =
       { 'json': JSON.parse
       , 'yaml': yaml.eval 
@@ -149,8 +150,8 @@ var Packager = exports.Packager =  {
   },
   
   // here
-  add_package: function(package_path){
-    this.parse_manifest(package_path);
+  add_package: function(package_path, cb){
+    this.parse_manifest(package_path, cb);
   },
   
   remove_package: function(package_name){
@@ -261,13 +262,15 @@ var Packager = exports.Packager =  {
   
   // # public BUILD
   
-  build: function(files, components, packages, blocks, excluded){
+  build: function(files, components, packages, blocks, excluded, cb){
     files = files || [];
     components = components || [];
     packages = packages || [];
     blocks = blocks || [];
     excluded = excluded || [];
-    var more = this.components_to_files(components);
+    var more = this.components_to_files(components)
+      , self
+      , source = '';
 
     includeAll(files, more);
     
@@ -287,41 +290,50 @@ var Packager = exports.Packager =  {
     
     if (!files.length) return '';
     
-    included_sources = [];
-    files.forEach(function(file) {
-      included_sources.push(fs.readFileSync(file).toString());
-    }, this);
+    step(
+      function(){
+        var group = this.group();
+        files.forEach(function(file) {
+          fs.readFile(file, group());
+        });
+      }
+      , function(err, sources){
+        sources.forEach(function(file){
+          source += file.toString() + "\n\n";
+        });
     
-    source = included_sources.join("\n\n");
-
-    // double check that I know what this is doing!
-    blocks.forEach(function(block) {
-      source.replace(new Regexp('(/[/*])\\s*<' + block + '>(.*?)</' + block + '>(\\s*\\*)?', 'g'), this.block_replacement);
-    }, this);
-    
-    return source + "\n";
+        // double check that I know what this is doing!
+        blocks.forEach(function(block) {
+          source.replace(new Regexp('(/[/*])\\s*<' + block + '>(.*?)</' + block + '>(\\s*\\*)?', 'g'), self.block_replacement);
+        });
+        this(source);
+      }
+      , cb
+    );
   },
   
   block_replacement: function(matches){
     return (matches[2].indexOf(matches[1] == "//" ? "\n" : "*") === -1) ? matches[2] : "";
   },
   
-  build_from_files: function(files){
-    return this.build(files);
+  build_from_files: function(files, cb){
+    return this.build(files, null, null, null, null, cb);
   },
   
   build_from_components: function(components, blocks, excluded){
-    return this.build([], components, [], blocks, excluded);
+    return this.build([], components, [], blocks, excluded, cb);
   },
 
   write_from_files: function(writeStream, files){
-    var full = this.build_from_files(files);
-    writeStream.write(full);
+    this.build_from_files(files, function(err, text) {
+      writeStream.write(text);
+    });
   },
 
   write_from_components: function(writeStream, components, blocks, exclude){
-    var full = this.build_from_components(components, blocks, exclude);
-    writeStream.write(full);
+    this.build_from_components(components, blocks, exclude, function(){
+      writeStream.write(text);
+    });
   },
   
   // # public FILES
