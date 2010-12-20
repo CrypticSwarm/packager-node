@@ -205,29 +205,46 @@ var Packager = exports.Packager =  {
     more_components = more_components || [];
     more_packages = more_packages || [];
     var packageNames = Object.keys(this.packages)
-      , i = packages.length;
+      , i = packageNames.length
+      , package
+      , files
+      , self = this
+      , valid = true;
     while(i--) {
-      this.packages[packageNames[i]].forEach(function(file) {
-        var file_requires = file['requires'];
+      package = this.packages[packageNames[i]];
+      files = Object.keys(package);
+      files.forEach(function(fileName) {
+        var file_requires = package[fileName]['requires'];
         file_requires.forEach(function(component){
-          if (!this.component_exists(component)){
+          if (!self.component_exists(component)){
             warn("WARNING: The component component, required in the file " + file['package/name'] + ", has not been provided.\n");
+            valid = false;
           }
         });
       });
     };
     
     more_files.forEach(function(file){
-      if (!this.file_exists(file)) warn("WARNING: The required file file could not be found.\n");
+      if (!self.file_exists(file)) { 
+        warn("WARNING: The required file file could not be found.\n");
+        valid = false;
+      }
     });
     
     more_components.forEach(function(component){
-      if (!this.component_exists(component)) warn("WARNING: The required component component could not be found.\n");
+      if (!self.component_exists(component)) {
+        warn("WARNING: The required component component could not be found.\n");
+        valid = false;
+      }
     });
     
     more_packages.forEach(function(package){
-      if (!this.package_exists(package)) warn("WARNING: The required package package could not be found.\n");
+      if (!self.package_exists(package)) {
+        warn("WARNING: The required package package could not be found.\n");
+        valid = false;
+      }
     });
+    return valid;
   },
   
   // # public BUILD
@@ -245,7 +262,7 @@ var Packager = exports.Packager =  {
     packages.forEach(function(package){
       more = this.get_all_files(package);
       includeAll(files, more);
-    });
+    }, this);
     
     files = this.complete_files(files);
     
@@ -260,8 +277,8 @@ var Packager = exports.Packager =  {
     
     included_sources = [];
     files.forEach(function(file) {
-        included_sources.push(this.get_file_source(file));
-    });
+      included_sources.push(fs.readFileSync(file).toString());
+    }, this);
     
     source = included_sources.join("\n\n");
 
@@ -348,7 +365,7 @@ var Packager = exports.Packager =  {
     components.forEach(function(component){
       var file_name = this.component_to_file(component);
       if (file_name) files.include(file_name);
-    });
+    }, this);
     return files;
   },
   
