@@ -341,7 +341,7 @@ var Packager = exports.Packager =  {
     var files = this.get_file_dependancies(file)
       , hash = this.file_to_hash(file);
     if (!hash) return [];
-    files.include(hash['package/name']);
+    files.include(hash['path']);
     return files;
   },
   
