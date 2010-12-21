@@ -421,7 +421,7 @@ var Packager = exports.Packager =  {
   // authors normalization
   
   get_package_authors: function(package){
-    if (package) package = this.root;
+    if (!package) package = this.root;
     package = this.manifests[package];
     if (!package) return [];
     return this.normalize_authors(package['authors'], package['author']);
@@ -430,7 +430,7 @@ var Packager = exports.Packager =  {
   get_file_authors: function(file){
     var hash = this.file_to_hash(file);
     if (!hash) return [];
-    return this.normalize_authors(hash.authors, hash.author, this.get_package_authors());
+    return this.normalize_authors(hash.authors, hash.author, this.get_package_authors(hash.package));
   },
   
   normalize_authors: function(authors, author, ddefault){
