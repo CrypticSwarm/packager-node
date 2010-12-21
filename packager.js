@@ -389,7 +389,9 @@ var Packager = exports.Packager =  {
   // # public COMPONENTS
   
   component_to_file: function(component){
-    return this.component_to_hash(component)['package/name'];
+    var hash = this.component_to_hash(component);
+    if (!hash) return warn("Can't find component " + component);
+    return hash['package/name'];
   },
   
   components_to_files: function(components){
