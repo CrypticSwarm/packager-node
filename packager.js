@@ -120,9 +120,17 @@ var Packager = exports.Packager =  {
           // this is where we "hook" for possible other replacers.
           // get contents of first comment
             , matches = /\/\*\s*^---([\s\S]*?)^\.\.\.\s*\*\//m.exec(source)
-            , descriptor = (matches && yaml.eval(matches[1])) || {}
+            , descriptor;
+          //Still some small problems with the yaml parser...
+          try {
+            descriptor = (matches && yaml.eval(matches[1])) || {};
+          } catch(e) { 
+            warn(file.path + ' failed parse ' + e);
+            return;
+          }
+          
           // populate / convert to array requires and provides
-            , provides = descriptor.provides || []
+          var provides = descriptor.provides || []
             , file_name = descriptor.name || path.basename(filePath) + '.js'
             , license = descriptor.license
           // "normalization" for requires. Fills up the default package name from requires, if not present.
