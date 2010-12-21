@@ -403,27 +403,6 @@ var Packager = exports.Packager =  {
     return files;
   },
   
-  // # dynamic getter for PACKAGE properties and FILE properties
-  /*
-  _call: function(method, arguments){
-    if (strpos(method, 'get_file_') === 0){
-      file = array_get(arguments, 0);
-      if (empty(file)) return null;
-      key = substr(method, 9);
-      hash = this.file_to_hash(file);
-      return array_get(hash, key);
-    }
-    
-    if (strpos(method, 'get_package_') === 0){
-      key = substr(method, 12);
-      package = array_get(arguments, 0);
-      package = array_get(this.manifests, (empty(package)) ? this.root : package);
-      return array_get(package, key);
-    }
-    
-    return null;
-  },
- */ 
   get_packages: function(){
     return Object.keys(this.packages);
   },
