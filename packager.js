@@ -208,27 +208,22 @@ var Packager = exports.Packager =  {
         });
       });
     };
-    
-    more_files.forEach(function(file){
-      if (!self.file_exists(file)) { 
-        warn("WARNING: The required file file could not be found.\n");
-        valid = false;
-      }
+
+    var check =
+      { file: more_files
+      , component: more_components
+      , package: more_packages
+      };
+
+    Object.keys(check).forEach(function(what) {
+      check[what].forEach(function(item) {
+        if (!self[what + '_exists'](item)) {
+          warn("WARNING: The required " + what + " " + item + " could not be found.\n");
+          valid = false;
+        }
+      });
     });
     
-    more_components.forEach(function(component){
-      if (!self.component_exists(component)) {
-        warn("WARNING: The required component component could not be found.\n");
-        valid = false;
-      }
-    });
-    
-    more_packages.forEach(function(package){
-      if (!self.package_exists(package)) {
-        warn("WARNING: The required package package could not be found.\n");
-        valid = false;
-      }
-    });
     return valid;
   },
   
