@@ -12,7 +12,7 @@ var path = require('path')
       , json: 'json'
       };
 
-require('./util');
+require('./lib/util');
 
 //Include may need to be Included!
 function includeAll(into, what){
@@ -62,9 +62,7 @@ var Packager = exports.Packager =  {
         if (err) throw err;
         var group;
         if (stat.isDirectory()){  
-          console.log('isDirectory');
           package_path = path.dirname(filePath) + '/' + path.basename(filePath) + '/'
-          console.log('package_path', package_path)
           group = this.group();
           Object.keys(manifestExtensions).forEach(function(ext){
             var cb = group()
