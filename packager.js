@@ -198,8 +198,8 @@ var Packager = exports.Packager =  {
       , self = this
       , valid = true;
     while(i--) {
-      package = this.packages[packageNames[i]];
-      files = Object.keys(package.files);
+      package = this.packages[packageNames[i]].files;
+      files = Object.keys(package);
       files.forEach(function(fileName) {
         var file_requires = package[fileName]['requires'];
         file_requires.forEach(function(component){
