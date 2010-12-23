@@ -4,48 +4,48 @@ var packager = require('../packager').Packager
 
 console.assert(Array.diff([1,2,3,4,5], [3,6,2]).include(5) + '' == [1,4,5] + '')
 
-callbacks.parse_manifest = false;
-packager.parse_manifest('test-package', function(){
+callbacks.parseManifest = false;
+packager.parseManifest('test-package', function(){
   var test;
-  callbacks.parse_manifest = true;
+  callbacks.parseManifest = true;
   
   console.assert(
     packager.packages.TestPackage != null,
-    'parse_manifest should convert the manifest into an object'
+    'parseManifest should convert the manifest into an object'
   );
   
-  test = packager.get_package_authors('TestPackage')[0]
+  test = packager.getPackageAuthors('TestPackage')[0]
   console.assert(
     test == 'rpflo',
-    'get_package_authors, expected rpflo, got ',
+    'getPackageAuthors, expected rpflo, got ',
     test
   );
   
-  test = packager.get_file_authors('TestPackage/Source')[0]
+  test = packager.getFileAuthors('TestPackage/Source')[0]
   console.assert(
     test == 'CrypticSwarm',
-    'get_file_authors, expected CrypticSwarm, got',
+    'getFileAuthors, expected CrypticSwarm, got',
     test
   );
   
-  test = packager.component_to_file('TestPackage/source')
+  test = packager.componentToFile('TestPackage/source')
   console.assert(
     test == 'TestPackage/Source',
-    'component_to_file should do ... something ... expected TestPackage/Source, got',
+    'componentToFile should do ... something ... expected TestPackage/Source, got',
     test
   );
   
-  test = packager.component_to_hash('TestPackage/source')
+  test = packager.componentToHash('TestPackage/source')
   console.assert(
     test.name == 'Source',
-    'component_to_hash should create an object out of the yaml header, got this',
+    'componentToHash should create an object out of the yaml header, got this',
     test
   );
   
-  test = packager.file_to_hash('TestPackage/Source')
+  test = packager.fileToHash('TestPackage/Source')
   console.assert(
     test.name == 'Source',
-    'file_to_hash should create an object, got this',
+    'fileToHash should create an object, got this',
     test
   );
   
@@ -54,16 +54,16 @@ packager.parse_manifest('test-package', function(){
     'validate should validate a valid package, but did not'
   );
   
-  test = packager.get_all_files('TestPackage')
+  test = packager.getAllFiles('TestPackage')
   console.assert(
     test.toString() == 'TestPackage/Source,TestPackage/Source2',
-    'get_all_files should return an array of the files'
+    'getAllFiles should return an array of the files'
   );
   
-  test = packager.complete_files(packager.get_all_files('TestPackage'))
+  test = packager.completeFiles(packager.getAllFiles('TestPackage'))
   console.assert(
     test.toString() == './test-package/source2.js,./test-package/source.js',
-    'complete_files should return a list of paths, got',
+    'completeFiles should return a list of paths, got',
     test
   );
 
