@@ -75,7 +75,6 @@ var Packager = exports.Packager =  {
             });
           });
         } else if (stat.isFile()){
-          console.log('isFile')
           packagePath = path.dirname(filePath) + '/';
           manifestPath = packagePath + path.basename(filePath);
           manifestFormat = manifestExtensions[path.extname(filePath)];
