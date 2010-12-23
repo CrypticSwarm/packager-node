@@ -100,7 +100,10 @@ var Packager = exports.Packager =  {
         manifest.path = package_path;
         manifest.manifest = manifest_path;
         self.manifests[package_name] = manifest;
-        self.packages[package_name] = {};
+        self.packages[package_name] = 
+          { files: {}
+          , components: {}
+          };
         group = this.group();
         manifest.sources.forEach(function(filename, i){
           var filePath = package_path + filename
@@ -131,7 +134,7 @@ var Packager = exports.Packager =  {
           
           // populate / convert to array requires and provides
           var provides = descriptor.provides || []
-            , file_name = descriptor.name || path.basename(filePath) + '.js'
+            , file_name = descriptor.name || path.basename(filePath)
             , license = descriptor.license
           // "normalization" for requires. Fills up the default package name from requires, if not present.
             , requires = (descriptor.requires || []).map(
@@ -140,7 +143,7 @@ var Packager = exports.Packager =  {
                 }
               );
 
-          self.packages[package_name][file_name] = Object.extend(descriptor
+          self.packages[package_name].files[file_name] = Object.extend(descriptor
             , { package: package_name
               , requires: requires
               , provides: provides
@@ -150,6 +153,9 @@ var Packager = exports.Packager =  {
               , license: license || manifest.license
               }
           );
+          provides.forEach(function(component) {
+            self.packages[package_name].components[component] = self.packages[package_name].files[file_name];
+          });
         });
         this();
       }
@@ -233,7 +239,7 @@ var Packager = exports.Packager =  {
       , valid = true;
     while(i--) {
       package = this.packages[packageNames[i]];
-      files = Object.keys(package);
+      files = Object.keys(package.files);
       files.forEach(function(fileName) {
         var file_requires = package[fileName]['requires'];
         file_requires.forEach(function(component){
