@@ -313,20 +313,19 @@ var Packager = exports.Packager =  {
   // # public FILES
 
   get_all_files: function(of_package){
-    var files = []
-      , packageNames = Object.keys(this.packages)
-      , i = packageNames.length
-      , name
-      , package;
-    while(i--) {
-      if (of_package == null || of_package == packageNames[i]) {
-        package = this.packages[packageNames[i]];
-        Object.keys(package).forEach(function(file) {
-          files.push(package[file]['package/name']);
-        });
-      }
+    var files = [];
+    if (of_package == null) {
+      this.get_packages().forEach(function(package) {
+        files.concat(this.get_all_files(package));
+      }, this);
+      return files;
     }
-    return files;
+    else {
+      package = this.packages[of_package];
+      return Object.keys(package.files).map(function(file) {
+        return package.files[file]['package/name'];
+      });
+    }
   },
   
   get_file_dependancies: function(file){
