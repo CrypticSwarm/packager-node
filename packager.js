@@ -183,46 +183,6 @@ var Packager = exports.Packager =  {
     return [split[0], split[1]];
   },
 
-  // # private HASHES
-  component_to_hash: function(name){
-    var pair = this.parse_name(this.root, name)
-      , package = this.packages[pair[0]]
-      , component = pair[1]
-      , ret = null;
-
-    if (!package) return;
-    Object.keys(package).some(function(file){
-      return package[file].provides.some(function(c){
-        if (c == component) return ret = package[file];
-      });
-    });
-    
-    return ret;
-  },
-  
-  file_to_hash: function(name){
-    var pair = this.parse_name(this.root, name)
-      , package = this.packages[pair[0]]
-      , ret = null;
-
-    if (!package) return;
-    file_name = pair[1];
-
-    Object.keys(package).some(function(file) {
-      if (file == file_name) return ret = package[file];
-    });
-    
-    return ret;
-  },
-  
-  file_exists: function(name){
-    return !!this.file_to_hash(name);
-  },
-  
-  component_exists: function(name){
-    return !!this.component_to_hash(name);
-  },
-  
   package_exists: function(name){
     return !!this.packages[name];
   },
@@ -438,3 +398,17 @@ var Packager = exports.Packager =  {
   
 };
 
+function addParts(part) {
+  var toHash = Packager[part + '_to_hash'] = function(name) {
+    var pair = this.parse_name(this.root, name)
+      , package = this.packages[pair[0]]
+      , fileOrComponent = pair[1]
+    if (!package) return;
+    return package[part + 's'][fileOrComponent];
+  }
+  Packager[part + '_exists'] = function(name){
+    return !!toHash.call(this, name);
+  }
+}
+addParts('file');
+addParts('component');
