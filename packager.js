@@ -130,11 +130,11 @@ var Packager = exports.Packager =  {
           }
           
           // populate / convert to array requires and provides
-          var provides = descriptor.provides || []
+          var provides = Array.from(descriptor.provides || [])
             , fileName = descriptor.name || path.basename(filePath)
             , license = descriptor.license
           // "normalization" for requires. Fills up the default package name from requires, if not present.
-            , requires = (descriptor.requires || []).map(
+            , requires = Array.from(descriptor.requires || []).map(
                 function(require){
                   return self.parseName(packageName, require).join('/');
                 }
